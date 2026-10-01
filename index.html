@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>История вычислительной техники — интерактивный тренажёр</title>
+<style>
+  *{ box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body{ margin:0; padding:0; height:100%; }
+  body{
+    font-family: "Segoe UI", "Trebuchet MS", Roboto, Arial, sans-serif;
+    background: linear-gradient(180deg,#eef4fc 0%, #e2ecfa 100%);
+    color:#0d2b52;
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    padding:8px 14px 0;
+    overflow-x:hidden;
+    user-select:none;
+    -webkit-user-select:none;
+  }
+
+  header{
+    background:#fff;
+    border-radius:16px;
+    padding:8px 18px 10px;
+    box-shadow:0 4px 14px rgba(13,43,82,.12);
+    flex:0 0 auto;
+  }
+  .hrow{ display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap; }
+  h1{ font-size:24px; font-weight:900; margin:0; letter-spacing:.3px; }
+  .badges{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+  .badge{ font-size:16px; font-weight:800; padding:5px 14px; border-radius:12px; white-space:nowrap; }
+  .badge-step{ background:#e0ecff; color:#1d4ed8; }
+  .badge-score{ background:#fff3d1; color:#b45309; }
+  .progressbar{ margin-top:8px; height:14px; background:#dbe7f7; border-radius:999px; overflow:hidden; }
+  .progressfill{
+    height:100%; width:16.6%; border-radius:999px;
+    background:linear-gradient(90deg,#22c55e,#2563eb);
+    transition:width .35s ease;
+  }
+
+  main{ flex:1 1 auto; display:flex; flex-direction:column; padding:10px 0 0; min-height:0; overflow-y:auto; }
+  .task-head{ flex:0 0 auto; margin-bottom:8px; }
+  .task-head h2{ font-size:22px; font-weight:900; margin:0 0 2px; line-height:1.15; }
+  .task-head p{ font-size:16px; margin:0; color:#31527d; font-weight:600; line-height:1.25; }
+
+  .tray{
+    flex:0 0 auto;
+    display:flex; flex-wrap:wrap; gap:10px; align-items:center;
+    background:#fff;
+    border:3px dashed #a9c6ec;
+    border-radius:16px;
+    padding:10px 14px;
+    min-height:78px;
+    margin-bottom:10px;
+  }
+  .tray-empty{ font-size:16px; color:#7d95b5; font-weight:700; width:100%; text-align:center; }
+
+  .zones{ display:grid; gap:12px; flex:0 0 auto; padding-bottom:6px; }
+  .zone{
+    background:#fff;
+    border:3px solid #cfe0f5;
+    border-radius:16px;
+    padding:8px 10px;
+    min-height:120px;
+    display:flex; flex-direction:column;
+    transition:border-color .15s, background .15s, box-shadow .15s;
+  }
+  .zone.over{ border-color:#22c55e; background:#eafff2; box-shadow:0 0 0 5px rgba(34,197,94,.22); }
+  .zone-head{
+    display:flex; align-items:center; gap:8px;
+    font-size:16px; font-weight:900; color:#1d4ed8;
+    margin-bottom:8px; line-height:1.15;
+  }
+  .zone-emoji{ font-size:22px; line-height:1; }
+  .zone-body{ display:flex; flex-wrap:wrap; gap:8px; align-content:flex-start; flex:1 1 auto; }
+
+  .card{
+    display:flex; align-items:center; gap:8px;
+    background:#fff;
+    border:3px solid #2563eb;
+    border-radius:14px;
+    padding:8px 14px;
+    font-size:16px;
+    font-weight:800;
+    color:#0d2b52;
+    min-height:60px;
+    box-shadow:0 4px 0 #bfd4f0;
+    cursor:pointer;
+    touch-action:none;
+    transition:transform .1s ease, box-shadow .1s ease, background .15s, border-color .15s;
+    max-width:100%;
+  }
+  .card .emoji{ font-size:26px; line-height:1; }
+  .card .ctext{ line-height:1.15; }
+  .card.selected{ background:#fff6d6; border-color:#f59e0b; box-shadow:0 0 0 4px #fde68a, 0 4px 0 #e8b400; }
+  .card.dragging{ opacity:.3; }
+  .card.ghost{
+    position:fixed; margin:0; z-index:9999; pointer-events:none;
+    box-shadow:0 14px 24px rgba(13,43,82,.35);
+    transform:rotate(-2deg) scale(1.03);
+    opacity:.97;
+  }
+  .card.ok{ border-color:#16a34a; background:#e9fdf0; box-shadow:0 4px 0 #a8e6bf; }
+  .card.bad{ border-color:#dc2626; background:#ffeded; box-shadow:0 4px 0 #f3b6b6; }
+  .mark{ margin-left:auto; font-size:24px; font-weight:900; line-height:1; }
+  .mark-ok{ color:#16a34a; }
+  .mark-bad{ color:#dc2626; }
+
+  footer{
+    flex:0 0 auto;
+    display:flex; gap:12px; justify-content:center; flex-wrap:wrap;
+    padding:10px 0 12px;
+  }
+  .btn{
+    font-family:inherit;
+    font-size:18px; font-weight:900;
+    padding:10px 26px;
+    min-height:56px;
+    border:none; border-radius:14px;
+    color:#fff; cursor:pointer;
+    box-shadow:0 5px 0 rgba(0,0,0,.22);
+    transition:transform .08s ease, box-shadow .08s ease;
+  }
+  .btn:active{ transform:translateY(3px); box-shadow:0 2px 0 rgba(0,0,0,.22); }
+  .btn-check{ background:linear-gradient(180deg,#22c55e,#16a34a); }
+  .btn-reset{ background:linear-gradient(180deg,#fbbf24,#f59e0b); }
+  .btn-next{ background:linear-gradient(180deg,#3b82f6,#2563eb); }
+
+  .banner{
+    position:fixed; left:50%; top:50%;
+    transform:translate(-50%,-50%) scale(.85);
+    font-size:28px; font-weight:900;
+    padding:18px 36px; border-radius:20px;
+    color:#fff; opacity:0; pointer-events:none; z-index:9999;
+    transition:opacity .2s ease, transform .2s ease;
+    text-align:center; max-width:85vw;
+  }
+  .banner.show{ opacity:1; transform:translate(-50%,-50%) scale(1); }
+  .banner.ok{ background:#16a34a; box-shadow:0 14px 34px rgba(22,163,74,.45); }
+  .banner.bad{ background:#dc2626; box-shadow:0 14px 34px rgba(220,38,38,.45); }
+
+  .flash{ position:fixed; inset:0; pointer-events:none; opacity:0; z-index:9998; }
+  .flash.ok{ background:radial-gradient(circle, rgba(34,197,94,.55), rgba(34,197,94,0) 70%); animation:flashAnim .7s ease-out; }
+  .flash.bad{ background:radial-gradient(circle, rgba(239,68,68,.55), rgba(239,68,68,0) 70%); animation:flashAnim .7s ease-out; }
+  @keyframes flashAnim{ 0%{opacity:0} 25%{opacity:1} 100%{opacity:0} }
+
+  .final{
+    flex:1 1 auto; display:flex; flex-direction:column; align-items:center; justify-content:center;
+    text-align:center; gap:12px; padding:20px;
+  }
+  .final-emoji{ font-size:80px; line-height:1; }
+  .final h2{ font-size:30px; margin:0; font-weight:900; }
+  .final-score{ font-size:28px; font-weight:900; color:#16a34a; background:#e9fdf0; padding:10px 26px; border-radius:16px; }
+  .final p{ font-size:18px; max-width:760px; margin:0; color:#31527d; font-weight:600; line-height:1.3; }
+
+  @media (max-height:700px){
+    h1{ font-size:20px; }
+    .task-head h2{ font-size:19px; }
+    .task-head p{ font-size:14px; }
+    .card{ font-size:14px; min-height:52px; padding:6px 12px; }
+    .card .emoji{ font-size:22px; }
+    .zone-head{ font-size:14px; }
+    .zone-emoji{ font-size:18px; }
+    .btn{ font-size:16px; min-height:48px; padding:8px 20px; }
+    .badge{ font-size:14px; padding:4px 10px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="hrow">
+    <h1>🖥️ История вычислительной техники</h1>
+    <div class="badges">
+      <div class="badge badge-step">Шаг <span id="stepNum">1</span> из 6</div>
+      <div class="badge badge-score">⭐ Баллы: <span id="score">0</span> / 24</div>
+    </div>
+  </div>
+  <div class="progressbar"><div class="progressfill" id="progressFill"></div></div>
+</header>
+
+<main id="main">
+  <div class="task-head">
+    <h2 id="taskTitle"></h2>
+    <p id="taskInstr"></p>
+  </div>
+  <div class="tray" id="tray"></div>
+  <div class="zones" id="zones"></div>
+</main>
+
+<footer>
+  <button id="btnCheck" class="btn btn-check">✅ Проверить</button>
+  <button id="btnReset" class="btn btn-reset">🔄 Сбросить</button>
+  <button id="btnNext" class="btn btn-next">➡️ Далее</button>
+</footer>
+
+<div class="banner" id="banner"></div>
+<div class="flash" id="flash"></div>
+
+<script>
+(function(){
+  'use strict';
+
+  const TASKS = [
+    {
+      title: 'Задание 1. Древнее устройство → современный аналог',
+      instruction: 'Перетащи древнее устройство в ячейку с его современным аналогом. Или нажми на карточку, а затем на нужную ячейку.',
+      maxScore: 3,
+      multi: false,
+      targets: [
+        { id: 't-calc', label: 'Калькулятор', emoji: '🔢' },
+        { id: 't-pc',   label: 'Системный блок', emoji: '🖥️' },
+        { id: 't-usb',  label: 'Флешка / Диск', emoji: '💾' }
+      ],
+      items: [
+        { id: 'i-abak', emoji: '🧮', text: 'Абак / Счёты', target: 't-calc' },
+        { id: 'i-pask', emoji: '⚙️', text: 'Паскалина (шестерёнки)', target: 't-pc' },
+        { id: 'i-perf', emoji: '📜', text: 'Перфокарта', target: 't-usb' }
+      ]
+    },
+    {
+      title: 'Задание 2. Элементная база поколений ЭВМ',
+      instruction: 'Перетащи деталь к тому поколению ЭВМ, в котором она использовалась.',
+      maxScore: 4,
+      multi: false,
+      targets: [
+        { id: 'g1', label: '1-е поколение', emoji: '1️⃣' },
+        { id: 'g2', label: '2-е поколение', emoji: '2️⃣' },
+        { id: 'g3', label: '3-е поколение', emoji: '3️⃣' },
+        { id: 'g4', label: '4-е поколение', emoji: '4️⃣' }
+      ],
+      items: [
+        { id: 'e-lamp', emoji: '💡', text: 'Электронные лампы', target: 'g1' },
+        { id: 'e-tran', emoji: '🔌', text: 'Транзисторы', target: 'g2' },
+        { id: 'e-is',   emoji: '🔲', text: 'Интегральные схемы', target: 'g3' },
+        { id: 'e-mp',   emoji: '⚡', text: 'Микропроцессор', target: 'g4' }
+      ]
+    },
+    {
+      title: 'Задание 3. Учёные и их изобретения',
+      instruction: 'Перетащи имя учёного к тому делу, которое он создал.',
+      maxScore: 3,
+      multi: false,
+      targets: [
+        { id: 'd-mash', label: 'Механическая суммирующая машина', emoji: '⚙️' },
+        { id: 'd-anal', label: 'Проект Аналитической машины', emoji: '📐' },
+        { id: 'd-prog', label: 'Первая в истории программа и алгоритм', emoji: '📝' }
+      ],
+      items: [
+        { id: 'p-pas', emoji: '👨‍🔬', text: 'Блез Паскаль', target: 'd-mash' },
+        { id: 'p-beb', emoji: '👨‍🔧', text: 'Чарльз Бэббидж', target: 'd-anal' },
+        { id: 'p-lav', emoji: '👩‍💻', text: 'Ада Лавлейс', target: 'd-prog' }
+      ]
+    },
+    {
+      title: 'Задание 4. Лента времени',
+      instruction: 'Расставь этапы развития вычислительной техники по порядку: от самого древнего (1) к современному (4).',
+      maxScore: 4,
+      multi: false,
+      targets: [
+        { id: 's1', label: '1 — самый древний', emoji: '1️⃣' },
+        { id: 's2', label: '2', emoji: '2️⃣' },
+        { id: 's3', label: '3', emoji: '3️⃣' },
+        { id: 's4', label: '4 — современный', emoji: '4️⃣' }
+      ],
+      items: [
+        { id: 'h1', emoji: '🧮', text: 'Ручной этап (Абак)', target: 's1' },
+        { id: 'h2', emoji: '⚙️', text: 'Механический этап (Паскалина)', target: 's2' },
+        { id: 'h3', emoji: '🔌', text: 'Электромеханический (Табулятор)', target: 's3' },
+        { id: 'h4', emoji: '💻', text: 'Электронный этап (ЭВМ и ПК)', target: 's4' }
+      ]
+    },
+    {
+      title: 'Задание 5. Сортировка характеристик',
+      instruction: 'Распредели характеристики по двум корзинам: «1-е поколение ЭВМ» и «4-е поколение ЭВМ».',
+      maxScore: 6,
+      multi: true,
+      targets: [
+        { id: 'b1', label: '1-е поколение ЭВМ', emoji: '💡' },
+        { id: 'b4', label: '4-е поколение ЭВМ', emoji: '💻' }
+      ],
+      items: [
+        { id: 'c1', emoji: '🏢', text: 'Огромный размер с комнату', target: 'b1' },
+        { id: 'c2', emoji: '🔥', text: 'Грелись и часто перегорали', target: 'b1' },
+        { id: 'c3', emoji: '🖥️', text: 'Помещается на рабочем столе', target: 'b4' },
+        { id: 'c4', emoji: '💡', text: 'Использовали электронные лампы', target: 'b1' },
+        { id: 'c5', emoji: '⚡', text: 'Используют микропроцессоры', target: 'b4' },
+        { id: 'c6', emoji: '🌐', text: 'Наличие интернета и сенсорных экранов', target: 'b4' }
+      ]
+    },
+    {
+      title: 'Задание 6. Компьютер будущего (5 поколение)',
+      instruction: 'Перетащи в корзину «Технологии будущего» ТОЛЬКО 4 карточки, которые относятся к 5 поколению и перспективам развития вычислительной техники.',
+      maxScore: 4,
+      multi: true,
+      type: 'select',
+      targets: [
+        { id: 'f1', label: 'Технологии будущего (5 поколение)', emoji: '🚀' }
+      ],
+      items: [
+        { id: 'f-ai',    emoji: '🤖', text: 'Искусственный интеллект', correct: true },
+        { id: 'f-q',     emoji: '⚛️', text: 'Квантовые процессоры', correct: true },
+        { id: 'f-holo',  emoji: '🔮', text: 'Голографический интерфейс', correct: true },
+        { id: 'f-neuro', emoji: '🧠', text: 'Нейросети', correct: true },
+        { id: 'f-lamp',  emoji: '💡', text: 'Вакуумная лампа', correct: false },
+        { id: 'f-punch', emoji: '📜', text: 'Перфокарта', correct: false },
+        { id: 'f-abak',  emoji: '🧮', text: 'Деревянные счёты', correct: false },
+        { id: 'f-tran',  emoji: '🔌', text: 'Транзистор', correct: false }
+      ]
+    }
+  ];
+
+  let currentTask = 0;
+  let placements = {};
+  let selectedId = null;
+  let checkResults = null;
+  let taskScores = [null, null, null, null, null, null];
+  let finished = false;
+  let drag = null;
+  let bannerTimer = null;
+  let audioCtx = null;
+
+  const mainEl = document.getElementById('main');
+  const MAIN_HTML = mainEl.innerHTML;
+
+  function getTray(){ return document.getElementById('tray'); }
+  function getZones(){ return document.getElementById('zones'); }
+  function currentTaskData(){ return TASKS[currentTask]; }
+
+  function updateHeader(){
+    document.getElementById('stepNum').textContent = String(currentTask + 1);
+    document.getElementById('progressFill').style.width = ((currentTask + 1) / TASKS.length * 100) + '%';
+  }
+
+  function updateScore(){
+    let s = 0;
+    for (let i = 0; i < taskScores.length; i++){
+      if (taskScores[i]) s += taskScores[i];
+    }
+    document.getElementById('score').textContent = String(s);
+  }
+
+  function makeCard(item){
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.dataset.id = item.id;
+    if (selectedId === item.id) card.classList.add('selected');
+
+    const emoji = document.createElement('span');
+    emoji.className = 'emoji';
+    emoji.textContent = item.emoji;
+
+    const text = document.createElement('span');
+    text.className = 'ctext';
+    text.textContent = item.text;
+
+    card.appendChild(emoji);
+    card.appendChild(text);
+
+    if (checkResults){
+      const ok = !!checkResults[item.id];
+      card.classList.add(ok ? 'ok' : 'bad');
+      const mark = document.createElement('span');
+      mark.className = 'mark ' + (ok ? 'mark-ok' : 'mark-bad');
+      mark.textContent = ok ? '✓' : '✗';
+      card.appendChild(mark);
+    }
+    return card;
+  }
+
+  function render(){
+    const t = currentTaskData();
+
+    document.getElementById('taskTitle').textContent = t.title;
+    document.getElementById('taskInstr').textContent = t.instruction;
+
+    const tray = getTray();
+    tray.innerHTML = '';
+    const unplaced = t.items.filter(function(it){ return !placements[it.id]; });
+    if (unplaced.length === 0){
+      const empty = document.createElement('div');
+      empty.className = 'tray-empty';
+      empty.textContent = '✨ Все карточки размещены';
+      tray.appendChild(empty);
+    } else {
+      unplaced.forEach(function(it){ tray.appendChild(makeCard(it)); });
+    }
+
+    const zones = getZones();
+    zones.innerHTML = '';
+    const cols = Math.min(t.targets.length, 4);
+    zones.style.gridTemplateColumns = 'repeat(' + cols + ', minmax(0, 1fr))';
+
+    t.targets.forEach(function(tg){
+      const zone = document.createElement('div');
+      zone.className = 'zone';
+      zone.dataset.zone = tg.id;
+
+      const head = document.createElement('div');
+      head.className = 'zone-head';
+      const he = document.createElement('span');
+      he.className = 'zone-emoji';
+      he.textContent = tg.emoji;
+      const hl = document.createElement('span');
+      hl.textContent = tg.label;
+      head.appendChild(he);
+      head.appendChild(hl);
+
+      const body = document.createElement('div');
+      body.className = 'zone-body';
+      t.items.forEach(function(it){
+        if (placements[it.id] === tg.id) body.appendChild(makeCard(it));
+      });
+
+      zone.appendChild(head);
+      zone.appendChild(body);
+      zones.appendChild(zone);
+    });
+  }
+
+  function clearCheck(){
+    checkResults = null;
+    if (taskScores[currentTask] !== null){
+      taskScores[currentTask] = null;
+      updateScore();
+    }
+    hideBanner();
+  }
+
+  function placeItem(id, zoneId){
+    const t = currentTaskData();
+    if (zoneId !== null && !t.multi){
+      for (const key in placements){
+        if (placements[key] === zoneId && key !== id) delete placements[key];
+      }
+    }
+    if (zoneId === null){
+      delete placements[id];
+    } else {
+      placements[id] = zoneId;
+    }
+    selectedId = null;
+    clearCheck();
+    render();
+  }
+
+  function tapCard(id){
+    if (selectedId === id){
+      selectedId = null;
+      render();
+      return;
+    }
+    if (placements[id]){
+      delete placements[id];
+      selectedId = null;
+      clearCheck();
+      render();
+      return;
+    }
+    selectedId = id;
+    render();
+  }
+
+  function startGhost(e){
+    const r = drag.card.getBoundingClientRect();
+    const g = drag.card.cloneNode(true);
+    g.classList.add('ghost');
+    g.classList.remove('dragging');
+    g.style.width = r.width + 'px';
+    g.style.height = r.height + 'px';
+    g.style.left = r.left + 'px';
+    g.style.top = r.top + 'px';
+    document.body.appendChild(g);
+    drag.ghost = g;
+    drag.ox = e.clientX - r.left;
+    drag.oy = e.clientY - r.top;
+  }
+
+  function moveGhost(x, y){
+    if (!drag || !drag.ghost) return;
+    drag.ghost.style.left = (x - drag.ox) + 'px';
+    drag.ghost.style.top = (y - drag.oy) + 'px';
+  }
+
+  function highlightZone(x, y){
+    const elem = document.elementFromPoint(x, y);
+    const zone = elem ? elem.closest('.zone') : null;
+    document.querySelectorAll('.zone.over').forEach(function(z){
+      if (z !== zone) z.classList.remove('over');
+    });
+    if (zone) zone.classList.add('over');
+  }
+
+  function clearHighlight(){
+    document.querySelectorAll('.zone.over').forEach(function(z){ z.classList.remove('over'); });
+  }
+
+  function onDown(e){
+    if (finished) return;
+    if (e.pointerType === 'mouse' && e.button !== 0) return;
+    const card = e.target.closest ? e.target.closest('.card') : null;
+    if (!card) return;
+    e.preventDefault();
+    drag = {
+      id: card.dataset.id,
+      card: card,
+      sx: e.clientX,
+      sy: e.clientY,
+      moved: false,
+      ghost: null,
+      ox: 0,
+      oy: 0
+    };
+  }
+
+  function onMove(e){
+    if (!drag) return;
+    const dx = e.clientX - drag.sx;
+    const dy = e.clientY - drag.sy;
+    if (!drag.moved && Math.sqrt(dx * dx + dy * dy) > 8){
+      drag.moved = true;
+      startGhost(e);
+      drag.card.classList.add('dragging');
+    }
+    if (drag.moved){
+      e.preventDefault();
+      moveGhost(e.clientX, e.clientY);
+      highlightZone(e.clientX, e.clientY);
+    }
+  }
+
+  function onUp(e){
+    if (!drag) return;
+    const d = drag;
+    drag = null;
+
+    if (d.ghost) d.ghost.remove();
+    if (d.card) d.card.classList.remove('dragging');
+    clearHighlight();
+
+    if (d.moved){
+      const elem = document.elementFromPoint(e.clientX, e.clientY);
+      const zone = elem ? elem.closest('.zone') : null;
+      if (zone){
+        placeItem(d.id, zone.dataset.zone);
+      } else if (elem && elem.closest('#tray')){
+        placeItem(d.id, null);
+      }
+    } else {
+      const elem = document.elementFromPoint(e.clientX, e.clientY);
+      const cardEl = elem ? elem.closest('.card') : null;
+      const zoneEl = elem ? elem.closest('.zone') : null;
+      if (cardEl && cardEl.dataset.id === d.id){
+        tapCard(d.id);
+      } else if (zoneEl && selectedId){
+        placeItem(selectedId, zoneEl.dataset.zone);
+      } else if (selectedId){
+        selectedId = null;
+        render();
+      }
+    }
+  }
+
+  function onCancel(){
+    if (!drag) return;
+    if (drag.ghost) drag.ghost.remove();
+    if (drag.card) drag.card.classList.remove('dragging');
+    drag = null;
+    clearHighlight();
+  }
+
+  function showBanner(text, ok){
+    const b = document.getElementById('banner');
+    b.textContent = text;
+    b.className = 'banner show ' + (ok ? 'ok' : 'bad');
+    clearTimeout(bannerTimer);
+    bannerTimer = setTimeout(hideBanner, 2200);
+  }
+
+  function hideBanner(){
+    const b = document.getElementById('banner');
+    b.className = 'banner';
+  }
+
+  function flash(ok){
+    const f = document.getElementById('flash');
+    f.className = 'flash';
+    void f.offsetWidth;
+    f.className = 'flash ' + (ok ? 'ok' : 'bad');
+  }
+
+  function beep(ok){
+    try{
+      const Ctx = window.AudioContext || window.webkitAudioContext;
+      if (!Ctx) return;
+      if (!audioCtx) audioCtx = new Ctx();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      const now = audioCtx.currentTime;
+      const freqs = ok ? [523.25, 659.25, 783.99] : [196.00, 155.56];
+      freqs.forEach(function(f, i){
+        const o = audioCtx.createOscillator();
+        const g = audioCtx.createGain();
+        o.type = ok ? 'sine' : 'square';
+        o.frequency.value = f;
+        const t0 = now + i * 0.1;
+        g.gain.setValueAtTime(0.0001, t0);
+        g.gain.exponentialRampToValueAtTime(0.16, t0 + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.26);
+        o.connect(g);
+        g.connect(audioCtx.destination);
+        o.start(t0);
+        o.stop(t0 + 0.28);
+      });
+    } catch (err) {}
+  }
+
+  function doCheck(){
+    const t = currentTaskData();
+    const res = {};
+    let correct = 0;
+    let wrongPlaced = 0;
+
+    t.items.forEach(function(it){
+      const z = placements[it.id] || null;
+      let ok;
+      if (t.type === 'select'){
+        ok = !!it.correct && z === t.targets[0].id;
+        if (!it.correct && z === t.targets[0].id) wrongPlaced++;
+      } else {
+        ok = z === it.target;
+      }
+      res[it.id] = ok;
+      if (ok) correct++;
+    });
+
+    let score = correct;
+    if (t.type === 'select') score = Math.max(0, correct - wrongPlaced);
+
+    checkResults = res;
+    taskScores[currentTask] = score;
+    updateScore();
+    render();
+
+    const allOk = score === t.maxScore;
+    let msg;
+    if (allOk){
+      msg = '🎉 Всё верно! Отлично!';
+    } else {
+      msg = 'Правильно: ' + score + ' из ' + t.maxScore;
+      if (t.type === 'select' && wrongPlaced > 0){
+        msg += ' • лишних карточек: ' + wrongPlaced;
+      }
+    }
+    showBanner(msg, allOk);
+    flash(allOk);
+    beep(allOk);
+  }
+
+  function doReset(){
+    placements = {};
+    selectedId = null;
+    checkResults = null;
+    taskScores[currentTask] = null;
+    updateScore();
+    hideBanner();
+    render();
+  }
+
+  function doNext(){
+    if (finished){
+      restart();
+      return;
+    }
+    if (currentTask < TASKS.length - 1){
+      currentTask++;
+      placements = {};
+      selectedId = null;
+      checkResults = null;
+      hideBanner();
+      updateHeader();
+      render();
+    } else {
+      showFinal();
+    }
+  }
+
+  function showFinal(){
+    finished = true;
+    let total = 0;
+    for (let i = 0; i < taskScores.length; i++){
+      if (taskScores[i]) total += taskScores[i];
+    }
+    let praise;
+    if (total >= 21){
+      praise = 'Великолепно! Ты настоящий знаток истории вычислительной техники!';
+    } else if (total >= 14){
+      praise = 'Хороший результат! Повтори материал и попробуй ещё раз.';
+    } else {
+      praise = 'Не расстраивайся! Повтори тему и попробуй снова — обязательно получится.';
+    }
+    mainEl.innerHTML =
+      '<div class="final">' +
+        '<div class="final-emoji">🏆</div>' +
+        '<h2>Тренажёр пройден!</h2>' +
+        '<div class="final-score">' + total + ' из 24 баллов</div>' +
+        '<p>' + praise + '</p>' +
+      '</div>';
+    document.getElementById('btnCheck').style.display = 'none';
+    document.getElementById('btnReset').style.display = 'none';
+    document.getElementById('btnNext').textContent = '🔁 Начать заново';
+    document.getElementById('progressFill').style.width = '100%';
+    document.getElementById('stepNum').textContent = '6';
+  }
+
+  function restart(){
+    finished = false;
+    currentTask = 0;
+    placements = {};
+    selectedId = null;
+    checkResults = null;
+    taskScores = [null, null, null, null, null, null];
+    mainEl.innerHTML = MAIN_HTML;
+    document.getElementById('btnCheck').style.display = '';
+    document.getElementById('btnReset').style.display = '';
+    document.getElementById('btnNext').textContent = '➡️ Далее';
+    updateScore();
+    updateHeader();
+    hideBanner();
+    render();
+  }
+
+  document.addEventListener('pointerdown', onDown);
+  document.addEventListener('pointermove', onMove, { passive: false });
+  document.addEventListener('pointerup', onUp);
+  document.addEventListener('pointercancel', onCancel);
+  document.addEventListener('contextmenu', function(e){
+    if (e.target.closest && e.target.closest('.card')) e.preventDefault();
+  });
+
+  document.getElementById('btnCheck').addEventListener('click', doCheck);
+  document.getElementById('btnReset').addEventListener('click', doReset);
+  document.getElementById('btnNext').addEventListener('click', doNext);
+
+  updateHeader();
+  updateScore();
+  render();
+})();
+</script>
+</body>
+</html>
